@@ -1,0 +1,41 @@
+name: Wayvia Feed Update
+
+on:
+  schedule:
+    # Taeglich um 14:00 Uhr MEZ (= 12:00 UTC Sommerzeit / 13:00 UTC Winterzeit)
+    # Wir nehmen 12:00 UTC — im Winter ist es dann 13:00 MEZ, nah genug dran.
+    - cron: '0 12 * * *'
+
+  # Manuell ausloesbar ueber GitHub UI
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-feed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Feed bauen
+        run: python build_feed.py
+
+      - name: Aenderungen committen
+        run: |
+          git config user.name "Wayvia Feed Bot"
+          git config user.email "bot@sharpconsumer.de"
+          git add feed/wayvia_feed_sharp.csv
+          if git diff --cached --quiet; then
+            echo "Keine Aenderungen — kein Commit noetig."
+          else
+            git commit -m "feed: update $(date -u +%Y-%m-%d)"
+            git push
+          fi
